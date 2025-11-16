@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EPSO CAST – Reasoning Trainer (Verbal • Numerical • Abstract)</title>
+  <style>
+    :root{--bg:#0b0f14;--card:#111827;--muted:#6b7280;--text:#e5e7eb;--accent:#22c55e;--danger:#ef4444;--warn:#f59e0b;--btn:#1f2937}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+    .wrap{max-width:980px;margin:0 auto;padding:16px}
+    .card{background:linear-gradient(180deg,#121826, #0f172a);border:1px solid rgba(255,255,255,.06);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .col{flex:1 1 260px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    h1{font-size:20px;margin:0}
+    .sub{color:var(--muted);font-size:13px}
+    label{font-size:13px;color:var(--muted)}
+    input[type="number"], select, input[type="file"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#0b1220;color:var(--text)}
+    button{appearance:none;border:0;background:var(--btn);color:#fff;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:600}
+    button.primary{background:linear-gradient(180deg,#22d3ee,#06b6d4)}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,.12)}
+    button.success{background:linear-gradient(180deg,#34d399,#10b981)}
+    button.danger{background:linear-gradient(180deg,#fb7185,#ef4444)}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:13px}
+    .badge{padding:6px 10px;border-radius:999px;background:#101826;border:1px solid rgba(255,255,255,.08)}
+    .timer{font-variant-numeric:tabular-nums;font-weight:800}
+    .question{padding:18px;border-radius:14px;background:#0c1220;border:1px solid rgba(255,255,255,.06);font-size:16px;line-height:1.45}
+    .options{display:grid;gap:10px}
+    .option{padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#0b1220;text-align:left}
+    .option.correct{border-color:rgba(34,197,94,.8);box-shadow:0 0 0 2px rgba(34,197,94,.25) inset}
+    .option.wrong{border-color:rgba(239,68,68,.8);box-shadow:0 0 0 2px rgba(239,68,68,.25) inset}
+    .option:disabled{opacity:.7}
+    .progress{height:10px;background:#0d1322;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+    .bar{height:100%;background:linear-gradient(90deg,#22d3ee,#a78bfa);width:0%}
+    .screen{padding:18px}
+    .footer{margin-top:12px;color:var(--muted);font-size:12px;text-align:center}
+    .data{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:#0a1120;border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:10px}
+    .imgwrap{display:flex;justify-content:center;align-items:center;background:#0a1120;border:1px solid rgba(255,255,255,.08);padding:10px;border-radius:10px}
+    .imgwrap img{max-width:100%;height:auto;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>EPSO CAST – Reasoning Trainer</h1>
+        <div class="sub">Eigene Fragen laden • Kategorien: Verbal | Numerical | Abstract • Timer • Score • Offline</div>
+      </div>
+      <div class="toolbar">
+        <button class="ghost" id="installBtn" hidden>Auf Gerät installieren</button>
+        <button class="ghost" id="exportStatsBtn" title="Ergebnisse als CSV exportieren">Ergebnisse exportieren</button>
+      </div>
+    </header>
+    <section class="card screen">
+      <div class="row" style="margin-bottom:12px">
+        <div class="col">
+          <label>Kategorie</label>
+          <select id="category">
+            <option value="verbal">Verbal Reasoning</option>
+            <option value="numerical">Numerical Reasoning</option>
+            <option value="abstract">Abstract Reasoning</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Anzahl Fragen pro Durchgang</label>
+          <input type="number" id="numQuestions" value="20" min="1" max="2000" />
+        </div>
+        <div class="col">
+          <label>Timing</label>
+          <select id="timingMode">
+            <option value="perQ">⏱️ Pro Frage (Sekunden)</option>
+            <option value="perTest">⏳ Gesamttest (Minuten)</option>
+          </select>
+        </div>
+        <div class="col">
+          <label id="timingLabel">Sekunden pro Frage</label>
+          <input type="number" id="timeValue" value="60" min="5" max="3600" />
+        </div>
+        </div>
+
+      <div class="row" style="margin-bottom:12px">
+        <div class="col">
+          <label>CSV (Verbal) – Spalten: "Question", "A", "B", "C", "D", "Right Answer"</label>
+          <input type="file" id="csvVerbal" accept=".csv,text/csv" />
+        </div>
+        <div class="col">
+          <label>CSV (Numerical – Sets) – Spalten: Set No.; Q1; Q1.A … Q1.AA; Q2 … Q2.AA; Q3 … Q3.AA           </label>
+          <input type="file" id="csvNumerical" accept=".csv,text/csv" />
+        </div>
+      </div>
+        <div class="col">
+          <label>CSV (Abstract) – Spalten: "Image" (Pfad/URL), "A", "B", "C", "D", "Right Answer", "Question" (optional)</label>
+          <input type="file" id="csvAbstract" accept=".csv,text/csv" />
+        </div>
+      
+
+      <div class="toolbar">
+        <button class="primary" id="startBtn">Starten</button>
+        <button class="ghost" id="shuffleAllBtn">Nur mischen</button>
+        <div class="meta">
+          <span class="badge">Zufallsmodus aktiv</span>
+          <span class="badge" id="loadedBadge">0 Verbal • 0 Numerical • 0 Abstract</span>
+        </div>
+      </div>
+      <div class="footer">Tipp: Als App installieren und offline nutzen. Für Abstract-Bilder: relative Pfade (z. B. <code>img/p1.png</code>) oder volle URLs verwenden.</div>
+    </section>
+
+    <section class="card screen" id="quizScreen" style="display:none">
+      <div class="row" style="align-items:center;margin-bottom:8px">
+        <div class="meta">
+          <span class="badge" id="catBadge">Verbal</span>
+          <span class="badge" id="counter">Frage 1/20</span>
+          <span class="badge timer" id="timer">00:60</span>
+          <span class="badge" id="scoreBadge">0 richtig</span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="ghost" id="quitBtn">Beenden</button>
+      </div>
+      <div class="progress" aria-label="Fortschritt"><div class="bar" id="progressBar"></div></div>
+      <div class="question" id="questionText" style="margin:14px 0 12px"></div>
+      <div id="dataBlock" class="data" style="display:none;margin:8px 0"></div>
+      <div id="imgBlock" class="imgwrap" style="display:none;margin:8px 0;flex-direction:column;gap:8px"></div>
+      <div class="options" id="options"></div>
+    </section>
+
+    <section class="card screen" id="resultScreen" style="display:none">
+      <h2 style="margin-top:0">Ergebnis</h2>
+      <div class="row">
+        <div class="col">
+          <div class="question"><strong id="finalScore">0 / 0</strong><br/><span class="sub" id="finalPct">0%</span></div>
+        </div>
+        <div class="col">
+          <div class="question">⏱️ Zeit: <strong id="finalTime">0:00</strong><br/><span class="sub" id="timingSummary"></span></div>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="success" id="restartBtn">Nochmal (neu mischen)</button>
+        <button class="ghost" id="reviewBtn">Falsch beantwortete anzeigen</button>
+      </div>
+      <h3>Verlauf</h3>
+      <div id="history"></div>
+    </section>
+  </div>
+
+  <script>
+    // --- CSV Parser ---
+    function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF){ text = text.slice(1); }
+  text = text.replace(/\r\n?/g, '\n');        // ← WICHTIG: echte \n verwenden
+  const firstNL = text.indexOf('\n');
+  const headerLine = firstNL === -1 ? text : text.slice(0, firstNL);
+  const commaCount = (headerLine.match(/,/g)||[]).length;
+  const semiCount  = (headerLine.match(/;/g)||[]).length;
+  const DELIM = semiCount>commaCount ? ';' : ',';
+  const rows=[]; let i=0, field='', row=[], inQuotes=false;
+  while(i<text.length){
+    const c=text[i];
+    if(inQuotes){
+      if(c=== '"'){
+        if(text[i+1]=== '"'){field+='"'; i++;}
+        else{inQuotes=false}
+      }else{field+=c}
+    }else{
+      if(c=== '"') inQuotes=true;
+      else if(c===DELIM){ row.push(field); field=''; }
+      else if(c=== '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else{ field+=c }
+    }
+    i++
+  }
+  row.push(field); rows.push(row);
+  const cleaned = rows
+    .filter(r=>r.some(x=>String(x).trim()!==''))
+    .map(r=> r.map(c=> String(c).trim().replace(/^"|"$/g,'')));
+  return cleaned;
+}
+
+    // --- State ---
+    const store = {
+      verbal: [], numerical: [], abstract: []
+    }; // in-memory banks (mirrored in localStorage) 
+    let currentCat = 'verbal';
+    let pool = []; // active question objects
+    let quiz=[], idx=0, correct=0, wrong=0, startTs=0, timerId=null, timeLeft=0, mode='perQ', perQ=60, perTest=20*60, answered=false, mistakes=[];
+
+    // --- Elements ---
+    const categorySel=document.getElementById('category');
+    const csvV=document.getElementById('csvVerbal');
+    const csvN=document.getElementById('csvNumerical');
+    const csvA=document.getElementById('csvAbstract');
+    const loadedBadge=document.getElementById('loadedBadge');
+    const numQuestions=document.getElementById('numQuestions');
+    const timingMode=document.getElementById('timingMode');
+    const timeValue=document.getElementById('timeValue');
+    const timingLabel=document.getElementById('timingLabel');
+    const startBtn=document.getElementById('startBtn');
+    const shuffleAllBtn=document.getElementById('shuffleAllBtn');
+    const quizScreen=document.getElementById('quizScreen');
+    const resultScreen=document.getElementById('resultScreen');
+    const questionText=document.getElementById('questionText');
+    const dataBlock=document.getElementById('dataBlock');
+    const imgBlock=document.getElementById('imgBlock');
+    const optionsEl=document.getElementById('options');
+    const counter=document.getElementById('counter');
+    const catBadge=document.getElementById('catBadge');
+    const scoreBadge=document.getElementById('scoreBadge');
+    const timerEl=document.getElementById('timer');
+    const progressBar=document.getElementById('progressBar');
+    const quitBtn=document.getElementById('quitBtn');
+    const restartBtn=document.getElementById('restartBtn');
+    const reviewBtn=document.getElementById('reviewBtn');
+    const finalScore=document.getElementById('finalScore');
+    const finalPct=document.getElementById('finalPct');
+    const finalTime=document.getElementById('finalTime');
+    const timingSummary=document.getElementById('timingSummary');
+    const historyEl=document.getElementById('history');
+    const exportStatsBtn=document.getElementById('exportStatsBtn');
+    const installBtn=document.getElementById('installBtn');
+
+    // Add quick actions UI
+    const toolsBar=document.querySelector('header .toolbar');
+    const clearBtn=document.createElement('button'); clearBtn.className='ghost'; clearBtn.textContent='Fragen löschen';
+    const exportBankBtn=document.createElement('button'); exportBankBtn.className='ghost'; exportBankBtn.textContent='Fragen exportieren';
+    toolsBar.appendChild(clearBtn); toolsBar.appendChild(exportBankBtn);
+
+    clearBtn.addEventListener('click', ()=>{
+      if(!confirm('Alle gespeicherten Fragen (alle Kategorien) löschen?')) return;
+      ['verbal','numerical','abstract'].forEach(c=> localStorage.removeItem(`epso_bank_${c}`));
+      store.verbal=[]; store.numerical=[]; store.abstract=[]; refreshLoadedBadge(); alert('Fragenbanken gelöscht.');
+    });
+    exportBankBtn.addEventListener('click', ()=>{
+      const snapshot = { verbal: store.verbal, numerical: store.numerical, abstract: store.abstract };
+      const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='epso_question_banks.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // PWA install prompt
+    let deferredPrompt=null;
+    window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt=e; installBtn.hidden=false; });
+    installBtn.addEventListener('click', async()=>{ if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; installBtn.hidden=true; }});
+
+    // Service worker for offline shell
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        const swJS=`self.addEventListener('install',e=>{e.waitUntil(caches.open('epso-cache-v2').then(c=>c.addAll(['./'])))});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))})`;
+        const blob=new Blob([swJS],{type:'text/javascript'});
+        const url=URL.createObjectURL(blob);
+        navigator.serviceWorker.register(url);
+      });
+    }
+
+    timingMode.addEventListener('change',()=>{
+      if(timingMode.value==='perQ'){timingLabel.textContent='Sekunden pro Frage'; timeValue.value=60}
+      else{timingLabel.textContent='Minuten für den Test'; timeValue.value=20}
+    });
+
+    categorySel.addEventListener('change', ()=>{ currentCat = categorySel.value; updateCatBadge(); renderHistory(); });
+
+    csvV.addEventListener('change', e=> handleCsvLoad(e, 'verbal'));
+    csvN.addEventListener('change', e=> handleCsvLoadNumericalSets(e));
+    csvA.addEventListener('change', e=> handleCsvLoad(e, 'abstract'));
+    // Numerical: Set-basierte CSV mit 3 Fragen + Screenshots pro Set
+// Numerical: Set-basierte CSV mit 3 Fragen + Screenshots pro Set
+
+// Numerical: Set-basierte CSV mit 3 Fragen + Screenshots pro Set (bereinigt)
+async function handleCsvLoadNumericalSets(e){
+  try{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if(!rows || !rows.length){
+      alert('Numerical CSV leer oder unlesbar.');
+      return;
+    }
+
+    const headersRaw = rows[0];
+    const headers = headersRaw.map(h => normalizeHeader(h));
+
+    // Header-Normalisierung
+    function normalizeHeader(h){
+      return String(h || '')
+        .toLowerCase()
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, '')
+        .replace(/\./g, '')
+        .trim();
+    }
+
+    function idxOfLike(key){
+      const keyN = normalizeHeader(key);
+      return headers.findIndex(h => h === keyN);
+    }
+
+    function pick(row, key){
+      const i = idxOfLike(key);
+      return i !== -1 ? row[i] : '';
+    }
+
+    function normalizeSetNo(v){
+      return String(v || '')
+        .trim();
+    }
+
+    function buildNumQ(row, n, setNo, images){
+      const q = pick(row, `q${n}`);
+      if(!q) return null;
+
+      const opts = [];
+      const labels = ['a','b','c','d','e','f']; // bis F möglich
+      for(const l of labels){
+        const v = pick(row, `q${n}.${l}`);
+        if(v) opts.push(v);
+      }
+      const ans = pick(row, `q${n}.aa`);
+
+      return {
+        type: 'numerical',
+        setNo,
+        images,
+        q,
+        data: '',
+        options: opts,
+        correct: normalizeAnswer(ans)
+      };
+    }
+
+    // Bildbasis aus UI
+    const imgBase = 'numerical/'; // z.B. numerical/1.png, numerical/2.png …
+    const ext = 'png';            // oder 'jpg', wenn du willst
+    const out = [];
+
+    for(const r of rows.slice(1)){
+      const rawSet = pick(r, 'set no.') || pick(r, 'setno') || pick(r, 'setno.') || pick(r, 'set');
+      const setNo = normalizeSetNo(rawSet);
+      if(!setNo) continue;
+
+      const images = [
+        `${imgBase}${setNo}.${ext}`,
+        `${imgBase}${setNo} 1.${ext}`
+      ];
+
+      out.push(buildNumQ(r, 1, setNo, images));
+      out.push(buildNumQ(r, 2, setNo, images));
+      out.push(buildNumQ(r, 3, setNo, images));
+    }
+
+    const filtered = out.filter(q => q && q.q);
+
+    store.numerical = filtered;
+    saveBank('numerical');
+    refreshLoadedBadge();
+
+    alert(`${filtered.length} Numerical-Fragen (Sets × 3) geladen und gespeichert.`);
+  }catch(err){
+    console.error('Numerical-Import Fehler:', err);
+    alert('Fehler beim Laden der Numerical-CSV (Details in der Konsole).');
+  }
+}
+
+    async function handleCsvLoad(e, cat){
+      const file=e.target.files[0]; if(!file) return;
+      const text=await file.text();
+      const rows=parseCSV(text);
+      const headers=rows[0].map(h=>h.toLowerCase().trim());
+      function idxOf(name){ return headers.indexOf(name.toLowerCase()); }
+      let mapped=[];
+      if(cat==='verbal'){
+        const iq = idxOf('question');
+        const id = idxOf('data'); // optional
+        const ia = idxOf('a'), ib = idxOf('b'), ic = idxOf('c'), idd = idxOf('d');
+        const ir = idxOf('right answer');
+        if([iq,ia,ib,ic,idd,ir].some(i=>i===-1)){
+          alert(`${cat.toUpperCase()}: CSV-Header unvollständig. Erwartet: Question, A, B, C, D, Right Answer (+ optional Data)`);
+          return;
+        }
+        mapped = rows.slice(1).filter(r=>r[iq]).map(r=>({
+          type: cat,
+          q: r[iq],
+          data: id!==-1 ? r[id] : '',
+          options: [r[ia],r[ib],r[ic],r[idd]],
+          correct: normalizeAnswer(r[ir])
+        }));
+      } else if(cat==='abstract'){
+  // Neue, einfache Struktur:
+  // CSV-Spalten: "Question" (Nummer) und "Answer" (richtiger Buchstabe)
+  const iq = idxOf('question');
+  const ir = idxOf('answer');
+
+  if(iq === -1 || ir === -1){
+    alert('ABSTRACT: CSV-Header unvollständig. Erwartet: Question, Answer');
+    return;
+  }
+
+  // Ordner und Format der Abstract-Bilder
+  const imgBase = 'abstract/'; // Bilder liegen in /abstract
+  const ext = 'png';           // ggf. auf 'jpg' ändern, wenn nötig
+
+  mapped = rows
+    .slice(1)
+    .filter(r => r[iq])           // Zeilen mit Frage-Nummer
+    .map(r => {
+      const num = String(r[iq]).trim();   // z.B. "1"
+
+      return {
+        type: 'abstract',
+        q: `Frage ${num}`,                 // optionaler Text
+        image: `${imgBase}${num}.${ext}`,  // z.B. abstract/1.png
+        // Wir haben keine Textantworten – nur Buchstaben A–E.
+        // Länge des Arrays = Anzahl Antwortmöglichkeiten.
+        options: ['', '', '', '', ''],    // 5 Optionen: A–E
+        correct: normalizeAnswer(r[ir])   // z.B. "A", "B", ...
+      };
+    });
+}
+
+      store[cat] = mapped;
+      saveBank(cat); // 🔒 persist immediately
+      refreshLoadedBadge();
+      alert(`${mapped.length} Fragen für ${cat} geladen und dauerhaft gespeichert (dieses Gerät/Browser).`);
+    }
+
+    function refreshLoadedBadge(){
+  loadedBadge.textContent = `${store.verbal.length} Verbal • ${store.numerical.length} Numerical • ${store.abstract.length} Abstract`;
+}
+    function normalizeAnswer(val){
+  const v=(val||'').toString().trim();
+  const upper=v.toUpperCase();
+  if(['A','B','C','D','E','F'].includes(upper)) return upper;
+  return v;
+}
+
+    function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+
+    shuffleAllBtn.addEventListener('click', ()=>{
+      if(!store[currentCat].length) return alert('Bitte zuerst CSV für die gewählte Kategorie laden.');
+      shuffle(store[currentCat]);
+      alert('Fragen gemischt. Du kannst jetzt starten.');
+    });
+
+    startBtn.addEventListener('click', ()=>{
+      if(!store[currentCat].length) return alert('Bitte zuerst CSV für die gewählte Kategorie laden.');
+      const n=Math.min(parseInt(numQuestions.value||'0',10), store[currentCat].length);
+      if(!n||n<1) return alert('Ungültige Anzahl Fragen.');
+      mode=timingMode.value;
+      if(mode==='perQ'){ perQ=Math.max(5, parseInt(timeValue.value||'60',10)); }
+      else{ perTest=Math.max(1, parseInt(timeValue.value||'20',10))*60; }
+      startQuiz(n);
+    });
+
+    quitBtn.addEventListener('click', ()=> endQuiz(true));
+    restartBtn.addEventListener('click', ()=> { startBtn.click(); });
+    reviewBtn.addEventListener('click', showReview);
+function buildNumericalQuizIndices(desiredCount){
+  // pool = store.numerical (wird in startQuiz gesetzt)
+  const bySet = {};
+  pool.forEach((q, idx)=>{
+    const key = q.setNo || `Set${Math.floor(idx/3)+1}`;
+    if(!bySet[key]) bySet[key] = [];
+    bySet[key].push(idx);
+  });
+
+  const setKeys = Object.keys(bySet);
+  if(!setKeys.length) return [];
+
+  // Sets mischen
+  shuffle(setKeys);
+
+  const questionsPerSet = 3; // du hast 3 Fragen pro Set
+  const maxSetsByDesired = desiredCount ? Math.floor(desiredCount / questionsPerSet) : setKeys.length;
+  const maxSets = Math.min(maxSetsByDesired || 1, setKeys.length);
+
+  const selectedSets = setKeys.slice(0, maxSets);
+  const indices = [];
+
+  // innerhalb jedes Sets in stabiler Reihenfolge (Q1, Q2, Q3)
+  selectedSets.forEach(key=>{
+    const idxs = bySet[key].slice().sort((a,b)=>a-b);
+    idxs.forEach(i => indices.push(i));
+  });
+
+  return indices;
+}
+
+    function startQuiz(n){
+  pool = store[currentCat];
+
+  let indices;
+
+  if(currentCat === 'numerical'){
+    // Gruppierte Auswahl nach Set
+    indices = buildNumericalQuizIndices(n);
+
+    // tatsächliche Fragezahl = Sets × 3 (oder weniger, falls nicht genug Sets)
+    n = indices.length;
+  } else {
+    // bisheriges Verhalten für verbal + abstract
+    indices = Array.from(pool.keys());
+    shuffle(indices);
+  }
+
+  quiz = indices.slice(0, n);
+
+  idx = 0; 
+  correct = 0; 
+  wrong = 0; 
+  mistakes = []; 
+  answered = false; 
+  startTs = Date.now();
+
+  progressBar.style.width = '0%';
+  scoreBadge.textContent = '0 richtig';
+
+  resultScreen.style.display = 'none';
+  quizScreen.style.display = 'block';
+
+  timeLeft = (mode === 'perQ') ? perQ : perTest;
+  startTimer();
+  updateCatBadge();
+  renderQuestion();
+}
+
+
+    function updateCatBadge(){
+      const map={verbal:'Verbal', numerical:'Numerical', abstract:'Abstract'};
+      catBadge.textContent = map[currentCat] || currentCat;
+    }
+
+    function renderQuestion(){
+      const q=pool[quiz[idx]];
+      counter.textContent=`Frage ${idx+1}/${quiz.length}`;
+      const pct=((idx)/quiz.length)*100; progressBar.style.width=pct+'%';
+
+      // Reset blocks
+      dataBlock.style.display='none';
+      dataBlock.textContent='';
+      imgBlock.style.display='none';
+      imgBlock.innerHTML='';
+     // Render by type
+if(q.type==='abstract'){
+  questionText.textContent = q.q || 'Wähle das passende Muster:';
+  imgBlock.style.display='flex';
+  imgBlock.innerHTML='';
+  const im=document.createElement('img');
+  im.alt='Abbildung';
+  im.src=q.image;
+  im.onerror=()=>{im.style.display='none'};
+  imgBlock.appendChild(im);
+} else if(q.type==='numerical'){
+  questionText.textContent = q.q;
+  imgBlock.style.display='flex';
+  imgBlock.innerHTML='';
+  (q.images||[]).forEach(src=>{
+    const im=document.createElement('img');
+    im.alt=`Set ${q.setNo}`;
+    im.src=src;
+    im.onerror=()=>{im.style.display='none'};
+    imgBlock.appendChild(im);
+  });
+  if(q.data){ dataBlock.style.display='block'; dataBlock.textContent=q.data; }
+} else {
+        questionText.textContent = q.q; // verbal
+      }
+
+      optionsEl.innerHTML='';
+      const labels=['A','B','C','D','E','F'];
+      q.options.forEach((opt,i)=>{
+        const btn=document.createElement('button');
+        btn.className='option';
+        btn.innerHTML=`<strong>${labels[i]}.</strong> ${escapeHtml(opt)}`;
+        btn.addEventListener('click', ()=> selectAnswer(labels[i], opt, btn));
+        optionsEl.appendChild(btn);
+      });
+      if(mode==='perQ'){ resetPerQTimer(); }
+      answered=false;
+    }
+
+    function escapeHtml(s){
+      return (s||'').replace(/[&<>\"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+    }
+
+    function selectAnswer(letter, text, btn){
+      if(answered) return; answered=true;
+      const q=pool[quiz[idx]];
+      const correctLetter= resolveCorrectLetter(q, letter, text);
+      const buttons=[...optionsEl.querySelectorAll('.option')];
+      buttons.forEach((b,k)=>{
+        const lab=['A','B','C','D','E','F'][k];
+        if(lab===correctLetter) b.classList.add('correct');
+      });
+      if(letter===correctLetter){
+        correct++; btn.classList.add('correct');
+      }else{
+        wrong++; btn.classList.add('wrong');
+        mistakes.push({question: q.q || (q.image?`[Bild] ${q.image}`:''), picked:letter, correct:correctLetter, options:q.options});
+      }
+      scoreBadge.textContent=`${correct} richtig`;
+      setTimeout(next, 650);
+    }
+
+    function resolveCorrectLetter(q){
+  if(['A','B','C','D','E','F'].includes(q.correct)) return q.correct;
+  const idx = q.options.findIndex(o => String(o).trim().toLowerCase() === String(q.correct||'').trim().toLowerCase());
+  return ['A','B','C','D','E','F'][Math.max(0, idx)];
+    }
+
+    function next(){
+      if(idx<quiz.length-1){ idx++; renderQuestion(); }
+      else{ endQuiz(false); }
+    }
+
+    function startTimer(){ clearInterval(timerId); timerId=setInterval(tick, 1000); updateTimerUI(); }
+    function resetPerQTimer(){ timeLeft=perQ; updateTimerUI(); }
+    function tick(){
+      timeLeft--; if(timeLeft<0) timeLeft=0; updateTimerUI();
+      if(mode==='perQ'){
+        if(timeLeft===0){
+          if(!answered){
+            const q=pool[quiz[idx]];
+            const correctLetter=resolveCorrectLetter(q);
+            mistakes.push({question:q.q || (q.image?`[Bild] ${q.image}`:''), picked:'—', correct:correctLetter, options:q.options});
+            wrong++; answered=true;
+          }
+          next();
+        }
+      }else{ if(timeLeft===0){ endQuiz(false); } }
+    }
+    function updateTimerUI(){
+      const mm=Math.floor(timeLeft/60).toString().padStart(2,'0');
+      const ss=(timeLeft%60).toString().padStart(2,'0');
+      timerEl.textContent=`${mm}:${ss}`;
+      if(timeLeft<=5 && mode==='perQ') timerEl.style.color='var(--warn)'; else timerEl.style.color='inherit';
+    }
+
+    function endQuiz(aborted){
+      clearInterval(timerId);
+      quizScreen.style.display='none'; resultScreen.style.display='block';
+      const total=quiz.length; const pct=Math.round((correct/total)*100);
+      finalScore.textContent=`${correct} / ${total}`; finalPct.textContent=`${pct}% korrekt`;
+      const elapsed=Math.floor((Date.now()-startTs)/1000);
+      finalTime.textContent=fmtTime(elapsed);
+      timingSummary.textContent= mode==='perQ' ? `${perQ}s/Frage` : `${Math.round(perTest/60)}min Testlimit`;
+      saveHistory(currentCat, {date:new Date().toISOString(), total, correct, pct, elapsed, mode, setting:(mode==='perQ'?perQ:perTest)});
+      renderHistory();
+    }
+
+    function fmtTime(s){ const m=Math.floor(s/60), r=s%60; return `${m}:${r.toString().padStart(2,'0')}` }
+
+    function saveHistory(cat, entry){
+      const key=`epso_${cat}_history`;
+      const arr=JSON.parse(localStorage.getItem(key)||'[]');
+      arr.unshift(entry); while(arr.length>20) arr.pop();
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+
+    // 🔒 Banks persistence
+    function saveBank(cat){
+      try{ localStorage.setItem(`epso_bank_${cat}`, JSON.stringify(store[cat])); }catch(e){ console.warn('Persist failed', e); }
+    }
+    function loadBank(cat){
+      try{
+        const raw=localStorage.getItem(`epso_bank_${cat}`);
+        if(raw){ store[cat]=JSON.parse(raw)||[]; }
+      }catch(e){ console.warn('Load failed', e); }
+    }
+
+    function renderHistory(){
+      const key=`epso_${currentCat}_history`; const arr=JSON.parse(localStorage.getItem(key)||'[]');
+      historyEl.innerHTML = arr.map(e=>{
+        const d=new Date(e.date);
+        return `<div class="history-item" style="display:flex;justify-content:space-between;border-top:1px dashed rgba(255,255,255,.08);padding:10px 0;color:var(--muted);font-size:13px"><span>${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span><span>${e.correct}/${e.total} • ${e.pct}% • ${fmtTime(e.elapsed)} • ${e.mode==='perQ'?e.setting+'s/Frage':Math.round(e.setting/60)+'min'}</span></div>`;
+      }).join('') || '<div class="sub">Noch keine Ergebnisse gespeichert.</div>';
+    }
+
+    const LETTERS = ['A','B','C','D','E','F'];
+
+    function showReview(){
+  if(!mistakes.length){
+    alert('Keine Fehler in dieser Runde 🎉');
+    return;
+  }
+  const lines = mistakes.map(m => {
+    const opts = LETTERS
+      .slice(0, m.options.length)
+      .map((L, i) => `${L}) ${m.options[i]}`)
+      .join(' | ');
+
+    return `Frage: ${m.question}
+Deine Antwort: ${m.picked}
+Richtig: ${m.correct}
+${opts}
+`;
+  }).join('\n');
+  alert(lines);
+}
+
+    exportStatsBtn.addEventListener('click', ()=>{
+      const cats=['verbal','numerical','abstract'];
+      const parts=['category,date,total,correct,pct,elapsed_seconds,mode,setting'];
+      for(const c of cats){
+        const arr=JSON.parse(localStorage.getItem(`epso_${c}_history`)||'[]');
+        for(const e of arr){ parts.push(`${c},${e.date},${e.total},${e.correct},${e.pct},${e.elapsed},${e.mode},${e.setting}`) }
+      }
+      if(parts.length===1){ alert('Keine Ergebnisse zum Export.'); return; }
+      const blob=new Blob([parts.join('\n')],{type:'text/csv'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='epso_results.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // Initial
+    function init(){
+      // Load persistent banks
+      ['verbal','numerical','abstract'].forEach(loadBank);
+      renderHistory(); updateCatBadge(); refreshLoadedBadge();
+    }
+    init();
+  </script>
+</body>
+</html>
